@@ -29,7 +29,9 @@ void pack_ctx_float32(ad_pack_context* context, float32 f);
 struct ad_unpack_context {
 	char* buffer;
 	int32 buffer_size;
-	int32 bytes_written;
+	int32 bytes_read;
 
 	char* last_feature;	// For debugging
 };
+
+bool unpack_ctx_init(ad_unpack_context* context, const char* filepath);

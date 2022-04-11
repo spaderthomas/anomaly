@@ -54,3 +54,16 @@ void pack_ctx_string(ad_pack_context* context, const char* data, int32 data_size
 	pack_ctx_data(context, data, data_size);
 	pack_ctx_data(context, &null_terminator, sizeof(char));
 }
+
+bool unpack_ctx_init(ad_unpack_context* context, const char* filepath) {
+	FILE* file = fopen(filepath, "r");
+	if (!file) return false;
+
+	fseek(file, 0, SEEK_END);
+	context->buffer_size = ftell(file);
+	context->buffer = (char*)calloc(sizeof(char), context->buffer_size);
+	fread(context->buffer, context->buffer_size, 1, file);
+
+	context->bytes_read = 0;
+	return true;
+};
