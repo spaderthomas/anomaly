@@ -14,10 +14,19 @@ const char* help =
 
 
 int main(int arg_count, char** args) {
-	// Hardcoded args
-	const char* data_set [8] = {
-		"/Users/spader/file.txt",
-		"/Library/Application Support/com.vmware.carbonblack.cloud/Logs"
+	// https://www.desmos.com/calculator/nui2htn4wf
+	//
+	// Simple 2D points that should map to two clusters
+	float data_set [8][2] = {
+		{ 1.f, 1.f },
+		{ .9f, .9f },
+		{ .8f, 1.f },
+		{ 1.f, .75f },
+
+		{ -1.f, -1.f },
+		{ -.9f, -.9f },
+		{ -.75f, -.9f },
+		{ -.9f, -.75f },
 	};
 	int32 buffer_size = 1024 * 1024;
 
@@ -46,10 +55,11 @@ int main(int arg_count, char** args) {
 	char* buffer = (char*)calloc(sizeof(char), buffer_size);
 	pack_ctx_init(&context, buffer, buffer_size);
 
-	pack_ctx_row(&context);
-	pack_ctx_float32(&context, 77.f);
-	pack_ctx_string(&context, data_set[0], strlen(data_set[0]));
-	pack_ctx_string(&context, data_set[1], strlen(data_set[1]));
+	for (int i = 0; i < 8; i++) {
+		pack_ctx_row(&context);
+		pack_ctx_float32(&context, data_set[i][0]);
+		pack_ctx_float32(&context, data_set[i][1]);
+	}
 	pack_ctx_end(&context);
 
 	pack_ctx_write(&context, output_path);

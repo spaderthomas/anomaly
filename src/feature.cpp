@@ -1,5 +1,6 @@
 const char* help =
-	"ad_featurize: featurize a raw dataset\n"
+	"ad_featurize: featurize a raw dataset\n\n"
+	
 	"usage:\n"
 	"  -i [input_path]: required, path to raw dataset\n"
 	"  -o [output_path]: required, path where featurized dataset will be written";
@@ -7,6 +8,7 @@ const char* help =
 #include <string.h>
 #include <stdlib.h>
 #include <cstdio>
+#include <vector>
 
 #include "types.hpp"
 #include "pack.hpp"
@@ -15,8 +17,25 @@ const char* help =
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
 
+ad_return_t write_featurized_data(ad_featurized_header* header, std::vector<float32>* buffer, const char* path) {
+	FILE* file = fopen(path, "w+");
+	if (!file) return AD_RETURN_BAD_FILE;
+
+	fwrite(header, sizeof(ad_featurized_header), 1, file);
+	fwrite(buffer->data(), buffer->size(), 1, file);
+	fclose(file);
+
+	return AD_RETURN_SUCCESS;
+}
+
+
+uint32 ad_featurize_float(std::vector<float32>* buffer, float32* feature) {
+	buffer->push_back(*feature);
+	return 1;
+}
 	
 int main(int arg_count, char** args) {
+	std::vector<float32> featurized;
 	char input_path  [AD_PATH_SIZE] = { 0 };
 	char output_path [AD_PATH_SIZE] = { 0 };
 
@@ -47,11 +66,33 @@ int main(int arg_count, char** args) {
 		exit(1);
 	}
 
+
+	ad_featurized_header info;
+	uint32 features_written_row = 0; // How many floats have we written for this row? Should all match
+	uint32 features_per_row = 0;
+	
 	ad_feature* header = nullptr;
 	void* data = nullptr;
 	while (!unpack_ctx_done(&context)) {
 		ad_return_t code = unpack_ctx_next(&context, &header, &data);
 		if (code) { fprintf(stderr, "unpack error, code = %d\n", code); exit(1); }
+
+		
+		if (header->type == ad_feature_type::ad_row) {
+			info.rows++;
+			
+			// As soon as we see a row, mark down its feature count so all following rows match.
+			// Note that this is not useful on the first row
+			if (!features_per_row) info.features_per_row = features_written_row;
+			assert(info.features_per_row == features_written_row);
+			features_written_row = 0;
+		}
+		else if (header->type == ad_feature_type::ad_float) {
+			uint32 count = ad_featurize_float(&featurized, (float*)data);
+			features_written_row += count;
+		}
 	}
+
+	write_featurized_data(&info, &featurized, output_path);
 	return 0;
 }

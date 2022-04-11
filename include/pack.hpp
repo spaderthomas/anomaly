@@ -20,6 +20,11 @@ struct ad_feature {
 	ad_feature_type type;
 };
 
+struct ad_featurized_header {
+	int32 rows = 0;
+	int32 features_per_row = 0;
+};
+
 struct ad_pack_context {
 	char* buffer;
 	int32 buffer_size;
@@ -46,5 +51,6 @@ struct ad_unpack_context {
 ad_return_t unpack_ctx_init(ad_unpack_context* context, const char* filepath);
 ad_return_t unpack_ctx_next(ad_unpack_context* context, ad_feature** header, void** data);
 ad_return_t unpack_ctx_done(ad_unpack_context* context);
+ad_return_t unpack_ctx_write(ad_unpack_context* context, const char* path);
 
 #endif // AD_PACK_H
