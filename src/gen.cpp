@@ -1,23 +1,46 @@
-/*
-gen.cpp: data generation for anomaly detection
+const char* help =
+	"gen.cpp: data generation for anomaly detection\n\n"
 
-This program generates an arbitray raw dataset, and packs it in binary form. The data is 
-not featurized at this stage, so that we may try several methods of featurization from
-the same raw data.
- */
-
+	"This program generates an raw data and packs it in binary form.\n"
+	"Data is not featurized at this stage, so that we may try several\n"
+	"methods of featurization fromthe same raw data.";
 
 #include <memory>
 
 #include "pack.hpp"
 
-const char* data_set [8] = {
-	"/Users/spader/file.txt",
-	"/Library/Application Support/com.vmware.carbonblack.cloud/Logs"
-};
+#define AD_FLAG_OUTPUT "-o"
+#define AD_FLAG_HELP "-h"
+
 
 int main(int arg_count, char** args) {
+	// Hardcoded args
+	const char* data_set [8] = {
+		"/Users/spader/file.txt",
+		"/Library/Application Support/com.vmware.carbonblack.cloud/Logs"
+	};
 	int32 buffer_size = 1024 * 1024;
+
+	// Command line args
+	char output_path [AD_PATH_SIZE] = { 0 };
+
+	for (int32 i = 1; i < arg_count; i++) {
+		char* flag = args[i];
+		if (!strcmp(flag, AD_FLAG_OUTPUT)) {
+			char* arg = args[++i];
+			strncpy(output_path, arg, AD_PATH_SIZE);
+		}
+		else if (!strcmp(flag, AD_FLAG_HELP)) {
+			printf("%s\n", help);
+			exit(0);
+		}
+	}
+	
+	// Sanity checks
+	if (!strlen(output_path)) {
+		printf("%s\n", help);
+		exit(1);
+	}
 
 	ad_pack_context context;
 	char* buffer = (char*)calloc(sizeof(char), buffer_size);
@@ -28,6 +51,9 @@ int main(int arg_count, char** args) {
 	pack_ctx_string(&context, data_set[0], strlen(data_set[0]));
 	pack_ctx_string(&context, data_set[1], strlen(data_set[1]));
 	pack_ctx_end(&context);
+
+	pack_ctx_write(&context, output_path);
+	exit(0);
 }
 
 
