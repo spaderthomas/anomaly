@@ -25,3 +25,11 @@ void pack_ctx_row(ad_pack_context* context);
 void pack_ctx_end(ad_pack_context* context);
 void pack_ctx_string(ad_pack_context* context, const char* data, int32 data_size);
 void pack_ctx_float32(ad_pack_context* context, float32 f);
+
+struct ad_unpack_context {
+	char* buffer;
+	int32 buffer_size;
+	int32 bytes_written;
+
+	char* last_feature;	// For debugging
+};
