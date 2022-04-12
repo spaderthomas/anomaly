@@ -11,6 +11,7 @@ const char* help =
 #include <cmath>
 #include <cstdlib>
 #include <vector>
+#include <float.h>
 
 #include "types.hpp"
 #include "pack.hpp"
@@ -29,10 +30,19 @@ void normalize_vector(float32* vector, uint32 size) {
 	for (uint32 i = 0; i < size; i++) vector[i] /= acc;
 }
 
-float32 vec_distance(float32* va, uint32 sa, float32* vb, uint32 sb) {
-	return 0.f;	
+float32 vec_distance(float32* va, float32* vb, uint32 dim) {
+	float32 sum = 0;
+	for (int i = 0; i < dim; i++) {
+		sum = sum + pow(va[i] - vb[i], 2);
+	}
+	return sqrt(sum);	
 }
 
+void vec_subtract(float32* va, float32* vb, uint32 dim, float32* vout) {
+	for (int i = 0; i < dim; i++) {
+		vout[i] = va[i] - vb[i];
+	}
+}
 // Neighborhood strength functions
 float32 ns_linear(uint32 winning_cluster, uint32 neighbor_cluster) {
 	int32 max_distance = 2;
@@ -49,7 +59,8 @@ int main(int arg_count, char** args) {
 	
 	ns_function ns = &ns_linear;
 	float32 learning_rate = .5;
-	uint32 clusters = 2;
+	uint32 clusters = 3;
+	float32 error_target = .1;
 
 	for (int32 i = 1; i < arg_count; i++) {
 		char* flag = args[i];
@@ -69,6 +80,7 @@ int main(int arg_count, char** args) {
 	}
 
 	FILE* file = fopen(input_path, "r");
+	if (!file) fprintf(stderr, "cannot open input file, path = %s\n", input_path);
 	fseek(file, 0, SEEK_END);
 	uint32 file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
@@ -81,7 +93,7 @@ int main(int arg_count, char** args) {
 	// and then a tighly packed array of floats.
     ad_featurized_header* header = (ad_featurized_header*)buffer;
 	uint32 input_size = header->rows * header->features_per_row;
-	std::span<float32> input((float32*)(buffer + sizeof(ad_featurized_header)), input_size);
+	float32* input_data = (float32*)(buffer + sizeof(ad_featurized_header));
 
 
 	// Randomly initialize weights between 0 and 1, then normalize them
@@ -94,25 +106,57 @@ int main(int arg_count, char** args) {
 		normalize_vector(weights.data() + i, header->features_per_row);
 	}
 
-	// Normalize the input data 
-	for (int i = 0; i < input_size; i += header->features_per_row) {
-		normalize_vector(input.data() + i, header->features_per_row);
-	}
+	uint32 iteration = 0;
+	float32 error = FLT_MAX;
+	while (error > error_target) {
+		iteration++;
+		for (int i = 0; i < header->rows; i++) {
+			float32* input = input_data + (i * header->features_per_row);
+			uint32 winning_cluster = 0;
+			float32 min_distance = UINT32_MAX;
+			for (int c = 0; c < clusters; c++) {
+				float32* weight = weights.data() + (c * header->features_per_row);
+				float32 distance = vec_distance(input, weight, header->features_per_row);
+				if (min_distance > distance) {
+					min_distance = distance;
+					winning_cluster = c;
+				}
+			}
 
-	for (int i = 0; i < header->rows; i++) {
-		uint32 winning_cluster = 0;
-		uint32 min_distance = UINT32_MAX;
-		for (int c = 0; c < clusters; c++) {
-			float32* w = weights.data() + (c * header->features_per_row);
-			// calc distance
-			// if smaller than min, this cluster is winning
+			for (int c = 0; c < clusters; c++) {
+				float32 strength = ns(winning_cluster, c);
+				float32* weight = weights.data() + (c * header->features_per_row);
+				for (int f = 0; f < header->features_per_row; f++) {
+					weight[f] += learning_rate * strength * (input[f] - weight[f]);
+				}
+			}
 		}
 
-		for (int c = 0; c < clusters; c++) {
-			// calculate NS between c and winning_cluster
-			// update weight by beta * NS * ()
+		// MSE of all inputs and winning clusters
+		error = 0;
+		for (int i = 0; i < header->rows; i++) {
+			float32* input = input_data + (i * header->features_per_row);
+			uint32 winning_cluster = 0;
+			float32 min_distance = UINT32_MAX;
+			for (int c = 0; c < clusters; c++) {
+				float32* weight = weights.data() + (c * header->features_per_row);
+				float32 distance = vec_distance(input, weight, header->features_per_row);
+				if (min_distance > distance) {
+					min_distance = distance;
+					winning_cluster = c;
+				}
+			}
+
+			float32* cluster = weights.data() + (winning_cluster * header->features_per_row);
+			for (int f = 0; f < header->features_per_row; f++) {
+				error += pow(input[f] - cluster[f], 2);
+			}
 		}
+
+		printf("iteration = %d, error = %f\n", iteration, error);
 	}
+
+	printf("done\n");
 
 
 	

@@ -16,13 +16,16 @@ const char* help =
 #define AD_FLAG_OUTPUT "-o"
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
+#define AD_FLAG_LOG "-l"
+
+bool log = false;
 
 ad_return_t write_featurized_data(ad_featurized_header* header, std::vector<float32>* buffer, const char* path) {
 	FILE* file = fopen(path, "w+");
 	if (!file) return AD_RETURN_BAD_FILE;
 
 	fwrite(header, sizeof(ad_featurized_header), 1, file);
-	fwrite(buffer->data(), buffer->size(), 1, file);
+	fwrite(buffer->data(), buffer->size() * sizeof(float32), 1, file);
 	fclose(file);
 
 	return AD_RETURN_SUCCESS;
@@ -48,6 +51,9 @@ int main(int arg_count, char** args) {
 		else if (!strcmp(flag, AD_FLAG_INPUT)) {
 			char* arg = args[++i];
 			strncpy(input_path, arg, AD_PATH_SIZE);
+		}
+		else if (!strcmp(flag, AD_FLAG_LOG)) {
+			log = true;
 		}
 		else if (!strcmp(flag, AD_FLAG_HELP)) {
 			printf("%s\n", help);
@@ -79,6 +85,8 @@ int main(int arg_count, char** args) {
 
 		
 		if (header->type == ad_feature_type::ad_row) {
+			if (log) printf("row\n");
+
 			info.rows++;
 			
 			// As soon as we see a row, mark down its feature count so all following rows match.
@@ -88,11 +96,14 @@ int main(int arg_count, char** args) {
 			features_written_row = 0;
 		}
 		else if (header->type == ad_feature_type::ad_float) {
+			if (log) printf("float: %f\n", *(float*)data);
+
 			uint32 count = ad_featurize_float(&featurized, (float*)data);
 			features_written_row += count;
 		}
 	}
 
+	if (log) printf("featurizing done, rows = %d, features per row = %d", info.rows, info.features_per_row);
 	write_featurized_data(&info, &featurized, output_path);
 	return 0;
 }

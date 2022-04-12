@@ -1,22 +1,48 @@
 const char* help =
-	"gen.cpp: data generation for anomaly detection\n\n"
+	"gen.cpp: raw data generation for anomaly detection\n\n"
 
-	"This program generates an raw data and packs it in binary form.\n"
-	"Data is not featurized at this stage, so that we may try several\n"
-	"methods of featurization fromthe same raw data.";
+	"usage:\n"
+	"  -o [output_path]: required, file to write output to\n"
+	"  -f [function] {test, iris}: function used to generate data";
 
 #include <memory>
 
 #include "pack.hpp"
 
 #define AD_FLAG_OUTPUT "-o"
+#define AD_FLAG_LOADER "-f"
 #define AD_FLAG_HELP "-h"
 
+typedef void (*load_fn)(char*, uint32);
 
-int main(int arg_count, char** args) {
-	// https://www.desmos.com/calculator/nui2htn4wf
-	//
-	// Simple 2D points that should map to two clusters
+// Command line args
+load_fn load;
+char output_path [AD_PATH_SIZE] = { 0 };
+uint32 buffer_size = 1024 * 1024;
+
+// Utility
+bool is_numeral(char c) {
+	return c >= '0' && c <= '9';
+}
+
+bool is_comma(char c) {
+	return c == ',';
+}
+
+bool is_newline(char c) {
+	return c == '\n';
+}
+
+int32 ctoi(char c) {
+	assert(is_numeral(c));
+	return c - '0';
+}
+
+// Loader functions
+void load_test(char* buffer, uint32 buffer_size) {
+	printf("generating data using load_test\n");
+	
+	// Simple 2D points that should map to two linearly separable clusters
 	float data_set [8][2] = {
 		{ 1.f, 1.f },
 		{ .9f, .9f },
@@ -28,16 +54,83 @@ int main(int arg_count, char** args) {
 		{ -.75f, -.9f },
 		{ -.9f, -.75f },
 	};
-	int32 buffer_size = 1024 * 1024;
+	
+	ad_pack_context context;
+	pack_ctx_init(&context, buffer, buffer_size);
 
-	// Command line args
-	char output_path [AD_PATH_SIZE] = { 0 };
+	for (int i = 0; i < 8; i++) {
+		pack_ctx_row(&context);
+		pack_ctx_float32(&context, data_set[i][0]);
+		pack_ctx_float32(&context, data_set[i][1]);
+	}
+	pack_ctx_end(&context);
 
+	pack_ctx_write(&context, output_path);
+}
+
+void load_iris(char* buffer, uint32 buffer_size) {
+	printf("generating data using load_iris\n");
+	
+	ad_pack_context context;
+	pack_ctx_init(&context, buffer, buffer_size);
+
+	// Load the file data
+	const char* path = "../data/iris.csv";
+	FILE* file = fopen(path, "r");
+	if (!file) {
+		fprintf(stderr, "failed to load iris dataset, path = %s", path);
+		exit(1);
+	}
+			
+	fseek(file, 0, SEEK_END);
+	uint32 file_size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	char* file_data = (char*)calloc(sizeof(char), file_size);
+	fread(file_data, file_size, 1, file);
+	fclose(file);
+
+	pack_ctx_row(&context); // Start the first row, couldn't figure out how to roll this into loop
+	
+	for(int i = 0; i < file_size;) {
+		char c = file_data[i];
+		// Parse a float, which are all of the format X.Y
+		if (is_numeral(c)) {
+			float32 value = ctoi(file_data[i++]);
+			i++;
+			char decimal = file_data[i++];
+			value = value + (ctoi(decimal) / 10.f);
+			pack_ctx_float32(&context, value);
+
+		}
+		// Advance to the next entry
+		else if (is_comma(c)) {
+			i++;
+		}
+		// Skip the flower label
+		else {
+    		while (!is_newline(c) && i < file_size) c = file_data[i++];
+            if (i == file_size) break;
+			pack_ctx_row(&context);
+		}
+	}
+
+	pack_ctx_end(&context);
+	pack_ctx_write(&context, output_path);
+}
+
+int main(int arg_count, char** args) {
+	load = &load_test;
 	for (int32 i = 1; i < arg_count; i++) {
 		char* flag = args[i];
 		if (!strcmp(flag, AD_FLAG_OUTPUT)) {
 			char* arg = args[++i];
 			strncpy(output_path, arg, AD_PATH_SIZE);
+		}
+		else if (!strcmp(flag, AD_FLAG_LOADER)) {
+			char* arg = args[++i];
+			if (!strcmp(arg, "test")) load = &load_test;
+			if (!strcmp(arg, "iris")) load = &load_iris;
 		}
 		else if (!strcmp(flag, AD_FLAG_HELP)) {
 			printf("%s\n", help);
@@ -51,18 +144,8 @@ int main(int arg_count, char** args) {
 		exit(1);
 	}
 
-	ad_pack_context context;
 	char* buffer = (char*)calloc(sizeof(char), buffer_size);
-	pack_ctx_init(&context, buffer, buffer_size);
-
-	for (int i = 0; i < 8; i++) {
-		pack_ctx_row(&context);
-		pack_ctx_float32(&context, data_set[i][0]);
-		pack_ctx_float32(&context, data_set[i][1]);
-	}
-	pack_ctx_end(&context);
-
-	pack_ctx_write(&context, output_path);
+	load(buffer, buffer_size);
 	exit(0);
 }
 
