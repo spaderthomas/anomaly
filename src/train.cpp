@@ -134,7 +134,7 @@ uint32 mtx_size(matrix_t& mtx) {
 // Neighborhood strength functions
 float32 ns_linear(uint32 winning_cluster, uint32 neighbor_cluster) {
 	int32 max_distance = 2;
-	float32 decay = .4;
+	float32 decay = .5;
 	
 	int32 distance = abs((int32)neighbor_cluster - (int32)winning_cluster);
 	if (distance > max_distance) return 0;
@@ -151,7 +151,7 @@ float32 ns_none(uint32 winning_cluster, uint32 neighbor_cluster) {
 ns_function ns = &ns_linear;
 float32 learning_rate = .2;
 uint32 clusters = 4;
-float32 error_threshold = .1;
+float32 error_threshold = .01;
 
 // Algorithm functions
 uint32 find_winning_cluster(matrix_t& weights, vector_t& input) {
@@ -260,7 +260,7 @@ int main(int arg_count, char** args) {
 	//
 	// SOM
 	//
-	srand(101);
+	srand(102);
 
 	matrix_t inputs;
 	mtx_init(&inputs, input_data, rows, cols);
@@ -279,7 +279,9 @@ int main(int arg_count, char** args) {
 	float32 delta_error = error_threshold + 1;
 	float32 error = FLT_MAX;
 	float32 last_error = FLT_MAX;
-	while (delta_error > error_threshold) {
+	bool retry = true;
+	uint32 jitter = 5;
+	while (retry) {
 		last_error = error;
 		error = 0;
 
@@ -303,6 +305,17 @@ int main(int arg_count, char** args) {
 		delta_error = abs(error - last_error);
 
 		printf("iteration = %d, error = %f\n", i++, error);
+
+		if (delta_error < error_threshold && jitter) {
+			printf("jittering\n");
+			jitter--;
+			mtx_for(weights, weight) {
+				vec_for(weight, w) {
+					*w += rand_float32(.1);
+				}
+			}
+		}
+		if (!jitter) retry = false;
 	}
 
 	for (uint32 i = 0; i < winners.size; i++) {
@@ -310,7 +323,7 @@ int main(int arg_count, char** args) {
 	}
 	mtx_for(weights, weight) {
 		uint32 cluster = mtx_indexof(weights, weight);
-		printf("cluster %d: (%f, %f, %f, %f)\n", cluster, weight[0], weight[2], weight[2], weight[3]);
+		printf("cluster %d: (%f, %f, %f, %f)\n", cluster, weight[0], weight[1], weight[2], weight[3]);
 	}
 	printf("done\n");
 
