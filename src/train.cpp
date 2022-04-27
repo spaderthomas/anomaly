@@ -7,7 +7,6 @@ const char* help =
 #include <cstdio>
 #include <string.h>
 #include <stdlib.h>
-#include <span>
 #include <cmath>
 #include <cstdlib>
 #include <vector>
@@ -15,121 +14,12 @@ const char* help =
 
 #include "types.hpp"
 #include "pack.hpp"
+#include "math.hpp"
 
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
 
 typedef float32 (*ns_function)(uint32, uint32);
-
-#define rand_float32(max) (static_cast<float32>(rand()) / static_cast<float32>(RAND_MAX / (max)))
-
-struct vector_t {
-	float32* data;
-	uint32 size;
-	
-	float32& operator[](uint32 i) { return *(data + i); }
-};
-
-void vec_init(vector_t* vector, float32* data, uint32 size) {
-	vector->data = data;
-	vector->size = size;
-}
-
-void vec_init(vector_t* vector, uint32 size) {
-	vector->data = (float32*)calloc(sizeof(float32), size);
-	vector->size = size;
-}
-
-
-float32 vec_length(vector_t& vec) {
-	float32 length = 0.f;
-	for (uint32 i = 0; i < vec.size; i++) length += vec[i] * vec[i];
-	length = sqrt(length);
-	return length;
-}
-
-void vec_normalize(vector_t& vec) {
-	float32 length = vec_length(vec);
-	for (uint32 i = 0; i < vec.size; i++) vec[i] /= length;
-}
-
-float32 vec_distance(vector_t& va, vector_t& vb) {
-	assert(va.size == vb.size);
-
-	float32 sum = 0;
-	for (int i = 0; i < va.size; i++) {
-		sum = sum + pow(va[i] - vb[i], 2);
-	}
-	return sqrt(sum);	
-}
-
-void vec_subtract(vector_t& va, vector_t& vb, vector_t& vout) {
-	assert(va.size == vb.size);
-	for (int i = 0; i < va.size; i++) {
-		vout[i] = va[i] - vb[i];
-	}
-	
-}
-
-#define vec_for(v, e) for (auto e = v.data; e < v.data + v.size; e++)
-
-
-struct matrix_t {
-	float32* data;
-	uint32 rows;	
-	uint32 cols;
-};
-
-void mtx_init(matrix_t* mtx, uint32 rows, uint32 cols) {
-	mtx->data = (float32*)calloc(sizeof(float32), rows * cols);
-	mtx->rows = rows;
-	mtx->cols = cols;
-}
-
-void mtx_init(matrix_t* mtx, float32* data, uint32 rows, uint32 cols) {
-	mtx->data = data;
-	mtx->rows = rows;
-	mtx->cols = cols;
-}
-
-#define mtx_for(m, v) for (vector_t v = mtx_at(m, 0); v.data < m.data + (m.rows * m.cols); v.data = v.data + m.cols)
-
-vector_t mtx_at(matrix_t& mtx, uint32 row) {
-	vector_t vec;
-	vec.data = mtx.data + (row * mtx.cols);
-	vec.size = mtx.cols;
-	return vec;
-}
-
-float32* mtx_at(matrix_t& mtx, uint32 row, uint32 col) {
-	return mtx.data + (row * mtx.cols) + col;
-}
-
-uint32 mtx_indexof(matrix_t& mtx, vector_t& vec) {
-	assert(vec.data >= mtx.data);
-	uint32 elements = vec.data - mtx.data;
-	return elements / mtx.cols;
-}
-
-void mtx_scale(matrix_t& mtx, float32 scalar) {
-	mtx_for(mtx, row) {
-		vec_for(row, entry) {
-			*entry *= scalar;
-		}
-	}
-}
-
-void mtx_add(matrix_t& mtx, matrix_t& deltas) {
-	for (int i = 0; i < mtx.rows; i++) {
-		for (int j = 0; j < mtx.cols; j++) {
-			*mtx_at(mtx, i, j) += *mtx_at(deltas, i, j);
-		}
-	}
-}
-					 
-uint32 mtx_size(matrix_t& mtx) {
-	return mtx.rows * mtx.cols;
-}
 
 // Neighborhood strength functions
 float32 ns_linear(uint32 winning_cluster, uint32 neighbor_cluster) {
