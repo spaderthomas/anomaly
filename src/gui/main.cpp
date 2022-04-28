@@ -1,109 +1,167 @@
+#include <iostream>
+#include <format>
+
 #include "glad/glad.h"
 #include <GLFW/glfw3.h>
 #include "imgui/imgui.h"
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_opengl3.h"
-#include <iostream>
+#include "imgui/imfilebrowser.h"
 
-GLFWwindow* window;
+#include "gui/ogl.hpp"
+#include "types.hpp"
+#include "som.hpp"
 
-// GLFW Callbacks
-static void GLFW_Cursor_Pos_Callback(GLFWwindow* window, double xpos, double ypos) {
-	std::cout << "cursor: " << std::to_string(xpos) << ", " << std::to_string(ypos) << std::endl;
-}
 
-void GLFW_Mouse_Button_Callback(GLFWwindow* window, int button, int action, int mods) {
-	std::cout << "mouse: " << std::to_string(button) << ", " << std::to_string(action) << std::endl;
-	}
+namespace global {
+	::ImGui::FileBrowser file_browser;
+};
 
-void GLFW_Key_Callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	std::cout << "key: " << std::to_string(key) << ", " << std::to_string(action) << std::endl;
-}
-
-void GLFW_Scroll_Callback(GLFWwindow* window, double xoffset, double yoffset) {
-	std::cout << "scroll: " << std::to_string(xoffset) << ", " << std::to_string(yoffset) << std::endl;
-}
-
-void GLFW_Error_Callback(int err, const char* msg) {
-	std::cout << err;
-	std::cout << msg;
-}
-
-void GLFW_Window_Size_Callback(GLFWwindow* window, int width, int height) {
-	std::cout << "window size: " << std::to_string(width) << ", " << std::to_string(height) << std::endl;
-}
-
-int init_glfw() {
-	auto result = glfwInit();
-	
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
-
-	window = glfwCreateWindow(1280, 720, "Anomaly", NULL, NULL);
-	if (window == NULL) {
-		std::cout << "Failed to create GLFW window" << std::endl;;
-		glfwTerminate();
-		return -1;
-	}
-	glfwMakeContextCurrent(window);
-
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		std::cout << "Failed to initialize GLAD" << std::endl;
-		return -1;
-	}
-	
-	glfwSetCursorPosCallback(window, GLFW_Cursor_Pos_Callback);
-	glfwSetMouseButtonCallback(window, GLFW_Mouse_Button_Callback);
-	glfwSetKeyCallback(window, GLFW_Key_Callback);
-	glfwSetScrollCallback(window, GLFW_Scroll_Callback);
-	glfwSetWindowSizeCallback(window, GLFW_Window_Size_Callback);
-	
-	glfwSwapInterval(0);
-
-	return 0;
-}
-void init_gl() {
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-}
-void init_imgui() {
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    
-	const char* glsl_version = "#version 150";
-	ImGui_ImplOpenGL3_Init(glsl_version);
-	
-	auto& imgui = ImGui::GetIO();
-	ImGui::StyleColorsDark();
-
-	imgui.IniFilename = nullptr;
-}
-
-bool show_demo_window = true;
 int main (int argc, char** argv) {
-  init_glfw();
-  init_gl();
-  init_imgui();
+	struct modals_t {
+		bool save_config = false;
+	};
+	bool is_loading_config = false;
+	bool show_demo_window = true;
 
-  // get version info
-  const GLubyte* renderer = glGetString (GL_RENDERER); // get renderer string
-  const GLubyte* version = glGetString (GL_VERSION); // version as a string
-  std::cout<<"Renderer: "<<renderer<<std::endl;
-  std::cout<<"OpenGL version supported "<<version<<std::endl;
+  	init_glfw();
+  	init_gl();
+  	init_imgui();
 
-  while(!glfwWindowShouldClose(window)) {
+	config_t config = {0};
+  	while(!glfwWindowShouldClose(window)) {
+		double frame_start_time = glfwGetTime();
+		double dt = 1.f / 30.f;
 
 		ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-		ImGui::ShowDemoWindow(&show_demo_window);
+		//ImGui::ShowDemoWindow(&show_demo_window);
 
+		ImGui::SetNextWindowSize({400, 0});
 		ImGui::Begin("anomaly");
+		
+		modals_t modals;	
+		if (ImGui::BeginMainMenuBar()) {
+			if (ImGui::BeginMenu("File")) {
+				if (ImGui::BeginMenu("Configuration")) {
+					if (ImGui::MenuItem("Load")) {
+						global::file_browser.Open();
+						is_loading_config = true;
+					}
+					if (ImGui::MenuItem("Save")) {
+						modals.save_config = true;
+					}
+
+					ImGui::EndMenu();
+				}
+				ImGui::EndMenu();
+			}
+
+			ImGui::EndMainMenuBar();
+		}
+
+		// Modal dialogue to open a popup to prompt the user for a name for this config
+		if (modals.save_config) {
+			ImGui::OpenPopup("Save Configuration");
+		}
+		if (ImGui::BeginPopupModal("Save Configuration")) {
+			ImGui::Text("Name");
+			ImGui::SameLine();
+			ImGui::SetNextItemWidth(200);
+			ImGui::InputText("##main_menu:save_config:name", config.name, 256);
+
+			if (ImGui::Button("Save")) {
+				if (!strlen(config.name)) {
+					std::cout << "Cannot save configuration without a name." << std::endl;
+					ImGui::OpenPopup("Error");
+				} else {
+					char path [256];
+					snprintf(path, 256, "%s/%s/%s.ini", "..", "data", config.name);
+					cfg_save(&config, path);
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			
+			ImGui::SameLine();
+			
+			if (ImGui::Button("Cancel")) {
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (ImGui::BeginPopup("Error")) {
+				ImGui::Text("Cannot save configuration without name.");
+				ImGui::EndPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (is_loading_config) {
+			if (global::file_browser.HasSelected()) {
+				auto path = global::file_browser.GetSelected().string();
+				cfg_load(&config, path.c_str());
+				global::file_browser.ClearSelected();
+				is_loading_config = false;
+			}
+
+		}
+
+		ImGui::Text("ad_gen config");
+
+		int input_size = 200;
+		ImGui::Text("function");
+		ImGui::SameLine();
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputText("##ad_gen:function", config.generator_function, 64);
+		
+		ImGui::Text("raw data file");
+		ImGui::SameLine();
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputText("##ad_gen:raw_data_file", config.raw_data_file, 256);
+
+		ImGui::Text("featurized data file");
+		ImGui::SameLine();
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputText("##ad_gen:featurized_data_file", config.featurized_data_file, 256);
+
+		ImGui::Separator();
+		ImGui::Text("som config");
+
+		ImGui::Text("neighborhood function");
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputText("##som:neighborhood", config.neighborhood_function, 256);
+
+		ImGui::Text("learning rate");
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputFloat("##som:learning_rate", &config.learning_rate);
+
+		ImGui::Text("# clusters");
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputScalar("##som:clusters", ImGuiDataType_U32, &config.count_clusters);
+
+		ImGui::Text("error threshold");
+		ImGui::SameLine();
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputFloat("##som:error", &config.error_threshold);
+
+		ImGui::Text("seed");
+		ImGui::SameLine();
+		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
+		ImGui::InputScalar("##som:seed", ImGuiDataType_U32, &config.seed);
+
+		if (ImGui::Button("Train")) {
+			ImGui::OpenPopup("Unimplemented");
+		}
+		if (ImGui::BeginPopup("Unimplemented")) {
+			ImGui::Text("i have not implemented this yet");
+			ImGui::EndPopup();
+		}
 		ImGui::End();
+
+		global::file_browser.Display();
+
 		ImGui::Render();
 
 

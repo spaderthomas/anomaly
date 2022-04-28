@@ -19,7 +19,7 @@ const char* help =
 	"ad_train: train a model on a featurized dataset\n\n"
 	
 	"usage:\n"
-	"  -i [input_path]: required, path to a featurized dataset";
+	"  -i [input_path]: required, path to a config file";
 
 #include <cstdio>
 #include <string.h>
@@ -32,98 +32,14 @@ const char* help =
 #include "types.hpp"
 #include "pack.hpp"
 #include "math.hpp"
+#include "som.hpp"
 
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
 
-typedef float32 (*ns_function)(uint32, uint32);
 
-// Neighborhood strength functions
-float32 ns_linear(uint32 winning_cluster, uint32 neighbor_cluster) {
-	int32 max_distance = 2;
-	float32 decay = .5;
-	
-	int32 distance = abs((int32)neighbor_cluster - (int32)winning_cluster);
-	if (distance > max_distance) return 0;
-	
-	return 1 - (distance * decay);
-}
-
-float32 ns_none(uint32 winning_cluster, uint32 neighbor_cluster) {
-	if (neighbor_cluster == winning_cluster) return 1;
-	return 0;
-}
 
 // Algorithm parameters
-ns_function ns = &ns_linear;
-float32 learning_rate = .2;
-uint32 clusters = 10;
-float32 error_threshold = .01;
-
-// Algorithm functions
-uint32 find_winning_cluster(matrix_t& weights, vector_t& input) {
-	uint32 winning_cluster = 0;
-	float32 min_distance = FLT_MAX;
-	
-	mtx_for(weights, weight) {
-		uint32 cluster = mtx_indexof(weights, weight);
-		float32 distance = vec_distance(input, weight);
-		if (min_distance > distance) {
-			winning_cluster = cluster;
-			min_distance = distance;
-		}
-	}
-
-	return winning_cluster;
-}
-
-void update_weights(matrix_t& weights, vector_t& input, uint32 winning_cluster) {
-	mtx_for(weights, weight) {
-		uint32 cluster = mtx_indexof(weights, weight);
-		float32 strength = ns(winning_cluster, cluster);
-		for (int i = 0; i < input.size; i++) {
-			weight[i] += learning_rate * strength * (input[i] - weight[i]);
-		}
-	}	
-}
-
-void calculate_weight_deltas(matrix_t& weights, vector_t& input, uint32 winning_cluster, matrix_t& deltas) {
-	mtx_for(weights, weight) {
-		uint32 cluster = mtx_indexof(weights, weight);
-		float32 strength = ns(winning_cluster, cluster);
-		for (int i = 0; i < input.size; i++) {
-			*mtx_at(deltas, cluster, i) += learning_rate * strength * (input[i] - weight[i]);
-		}
-	}	
-}
-
-float32 squared_error(vector_t& weight, vector_t& input) {
-	float32 error = 0;
-	for (uint32 i = 0; i < input.size; i++) {
-		error += pow(input[i] - weight[i], 2);
-	}
-
-	return error;
-}
-
-
-// SOM
-void som_init(matrix_t& weights, matrix_t& inputs) {
-	mtx_for(inputs, input) {
-		vec_normalize(input);
-	}
-
-	mtx_for(weights, weight) {
-		vec_for(weight, w) {
-			*w = rand_float32(1);
-		}
-	}
-	mtx_for(weights, weight) {
-		vec_normalize(weight);
-	}
-}
-
-
 int main(int arg_count, char** args) {
 	char input_path [AD_PATH_SIZE] = { 0 };
 
@@ -145,9 +61,14 @@ int main(int arg_count, char** args) {
 		exit(1);
 	}
 
+	som_t som;
+	cfg_load(&som.config, input_path);
+
 	// Load the binary input
-	FILE* file = fopen(input_path, "r");
-	if (!file) fprintf(stderr, "cannot open input file, path = %s\n", input_path);
+	char featurized_data_path [AD_PATH_SIZE];
+	snprintf(featurized_data_path, AD_PATH_SIZE, "../data/%s", som.config.featurized_data_file);
+	FILE* file = fopen(featurized_data_path, "r");
+	if (!file) fprintf(stderr, "cannot open input file, path = %s\n", featurized_data_path);
 	fseek(file, 0, SEEK_END);
 	uint32 file_size = ftell(file);
 	fseek(file, 0, SEEK_SET);
@@ -164,72 +85,43 @@ int main(int arg_count, char** args) {
 
 	float32* input_data = (float32*)(buffer + sizeof(ad_featurized_header));
 
-	//
-	// SOM
-	//
-	srand(102);
-
-	matrix_t inputs;
-	mtx_init(&inputs, input_data, rows, cols);
-	matrix_t weights;
-	mtx_init(&weights, clusters, cols);
-	matrix_t deltas;
-	mtx_init(&deltas, clusters, cols);
-	vector_t winners;
-	vec_init(&winners, rows);
-
-	som_init(weights, inputs);
+	// Initialize the algorithm
+	som_init(&som, input_data, rows, cols);
 
 	// Loop: Find each point's winning cluster, and then adjust this cluster and neighboring
 	// clusters to be closer to this point. Break when MSE reaches a threshold.
 	uint32 i = 0;
-	float32 delta_error = error_threshold + 1;
-	float32 error = FLT_MAX;
 	float32 last_error = FLT_MAX;
-	bool retry = true;
-	uint32 jitter = 5;
-	while (retry) {
-		last_error = error;
-		error = 0;
-
-		mtx_for(inputs, input) {
-			uint32 cluster = find_winning_cluster(weights, input);
-			calculate_weight_deltas(weights, input, cluster, deltas);
-			winners[mtx_indexof(inputs, input)] = cluster;
+	while (true) {
+		mtx_for(som.inputs, input) {
+			uint32 cluster = find_winning_cluster(&som, input);
+			calculate_weight_deltas(&som, input, cluster);
+			som.winners[mtx_indexof(som.inputs, input)] = cluster;
 		}
 
-		// Batch style update -- average weight deltas and apply them to weights
-		mtx_scale(deltas, 1.f / mtx_size(deltas));
-		mtx_add(weights, deltas);
-		memset(deltas.data, 0, sizeof(float32) * mtx_size(deltas));
+		apply_deltas(&som);
 
 		// MSE between all inputs and their winning cluster
-		mtx_for(inputs, input) {
-			uint32 cluster = winners[mtx_indexof(inputs, input)];
-			vector_t weight = mtx_at(weights, cluster);
+		float32 error = 0;
+		mtx_for(som.inputs, input) {
+			uint32 cluster = som.winners[mtx_indexof(som.inputs, input)];
+			vector_t weight = mtx_at(som.weights, cluster);
 			error += squared_error(weight, input);
 		}
-		delta_error = abs(error - last_error);
+		float32 delta_error = abs(error - last_error);
+		last_error = error;
 
 		printf("iteration = %d, error = %f\n", i++, error);
-
-		if (delta_error < error_threshold && jitter) {
-			printf("jittering\n");
-			jitter--;
-			mtx_for(weights, weight) {
-				vec_for(weight, w) {
-					*w += rand_float32(.1);
-				}
-			}
+		if (delta_error < som.config.error_threshold) {
+			break;
 		}
-		if (!jitter) retry = false;
 	}
 
-	for (uint32 i = 0; i < winners.size; i++) {
-		printf("input %d: %d\n", i, (uint32)winners[i]);
+	for (uint32 i = 0; i < som.winners.size; i++) {
+		printf("input %d: %d\n", i, (uint32)som.winners[i]);
 	}
-	mtx_for(weights, weight) {
-		uint32 cluster = mtx_indexof(weights, weight);
+	mtx_for(som.weights, weight) {
+		uint32 cluster = mtx_indexof(som.weights, weight);
 		printf("cluster %d: (%f, %f, %f, %f)\n", cluster, weight[0], weight[1], weight[2], weight[3]);
 	}
 	printf("done\n");

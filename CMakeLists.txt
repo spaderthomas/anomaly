@@ -34,6 +34,8 @@ add_executable(ad_train)
 target_sources(ad_train PRIVATE
   src/train.cpp
   src/math.cpp
+  src/som.cpp
+  src/ini.cpp
 )
 
 target_include_directories(ad_train PRIVATE
@@ -44,6 +46,10 @@ target_include_directories(ad_train PRIVATE
 add_executable(ad_gui)
 target_sources(ad_gui PRIVATE
   src/gui/main.cpp
+  src/gui/ogl.cpp
+  src/som.cpp
+  src/math.cpp
+  src/ini.cpp
   src/gui/glad.c
   src/gui/imgui.cpp
   src/gui/imgui_demo.cpp
