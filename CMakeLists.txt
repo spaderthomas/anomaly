@@ -43,12 +43,20 @@ target_include_directories(ad_train PRIVATE
 # GUI
 add_executable(ad_gui)
 target_sources(ad_gui PRIVATE
-  src/gui.cpp
-  src/glad.c
+  src/gui/main.cpp
+  src/gui/glad.c
+  src/gui/imgui.cpp
+  src/gui/imgui_demo.cpp
+  src/gui/imgui_draw.cpp
+  src/gui/imgui_tables.cpp
+  src/gui/imgui_widgets.cpp
+  src/gui/imgui_impl_glfw.cpp
+  src/gui/imgui_impl_opengl3.cpp
 )
 
 target_include_directories(ad_gui PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}/include"
+    "${CMAKE_CURRENT_LIST_DIR}/include/imgui"
   "/usr/local/include"
 )
 
@@ -62,6 +70,5 @@ if (NOT OGL)
 endif()
 
 target_link_libraries(ad_gui PRIVATE
-  GLEW
   glfw
   ${OGL})

@@ -1,8 +1,9 @@
-//File: main.cpp
-
 #include "glad/glad.h"
-#include <GLFW/glfw3.h> // GLFW helper library for window management
-#include <iostream> //for cout
+#include <GLFW/glfw3.h>
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_glfw.h"
+#include "imgui/imgui_impl_opengl3.h"
+#include <iostream>
 
 GLFWwindow* window;
 
@@ -35,11 +36,10 @@ void GLFW_Window_Size_Callback(GLFWwindow* window, int width, int height) {
 int init_glfw() {
 	auto result = glfwInit();
 	
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Required on Mac
 
 	window = glfwCreateWindow(1280, 720, "Anomaly", NULL, NULL);
 	if (window == NULL) {
@@ -68,10 +68,25 @@ void init_gl() {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_BLEND);
 }
+void init_imgui() {
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    
+	const char* glsl_version = "#version 150";
+	ImGui_ImplOpenGL3_Init(glsl_version);
+	
+	auto& imgui = ImGui::GetIO();
+	ImGui::StyleColorsDark();
 
+	imgui.IniFilename = nullptr;
+}
+
+bool show_demo_window = true;
 int main (int argc, char** argv) {
   init_glfw();
   init_gl();
+  init_imgui();
 
   // get version info
   const GLubyte* renderer = glGetString (GL_RENDERER); // get renderer string
@@ -80,8 +95,22 @@ int main (int argc, char** argv) {
   std::cout<<"OpenGL version supported "<<version<<std::endl;
 
   while(!glfwWindowShouldClose(window)) {
+
+		ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+		ImGui::ShowDemoWindow(&show_demo_window);
+
+		ImGui::Begin("anomaly");
+		ImGui::End();
+		ImGui::Render();
+
+
 		glfwPollEvents();
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
 		glfwSwapBuffers(window);
   }
 

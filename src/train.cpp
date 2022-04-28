@@ -1,3 +1,20 @@
+// todo:
+// - randomize the inputs; otherwise, you're feeding it all of the IRIS0 points at once, then all of the IRIS1, etc
+// - learning rate decay -- begin taking smaller steps. optimize for error, not just clusters
+//   - exponential decay
+// - use exponential decay for neighborhood distance
+// - jittering weights less common than changing initial weights
+// - mess with iris dataset -- remove random datapoints, remove a cluster
+//
+// - think of this as a data pipeline
+// - filenames: manually "cluster" them, run som, grab a few datapoints from the filename cluster and see how some classifies them
+
+// gui is able to recompile these programs
+// edit the parameters with Input**
+//   neighborhood function, learning rate, # clusters, error threshold, seed
+// write a parameter configuration out to a config file
+// run button
+
 const char* help =
 	"ad_train: train a model on a featurized dataset\n\n"
 	
@@ -40,7 +57,7 @@ float32 ns_none(uint32 winning_cluster, uint32 neighbor_cluster) {
 // Algorithm parameters
 ns_function ns = &ns_linear;
 float32 learning_rate = .2;
-uint32 clusters = 4;
+uint32 clusters = 10;
 float32 error_threshold = .01;
 
 // Algorithm functions
