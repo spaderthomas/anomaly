@@ -1,5 +1,6 @@
 #include <cassert>
 #include <memory>
+#include <cstring>
 #include "pack.hpp"
 
 // entry_magic is used to sanity-check the headers for a feature

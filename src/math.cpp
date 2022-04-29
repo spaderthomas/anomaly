@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include <cstdlib>
+#include <cassert>
 #include <vector>
 #include <float.h>
 #include <memory>

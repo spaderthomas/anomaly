@@ -6,6 +6,8 @@ const char* help =
 	"  -f [function] {test, iris}: function used to generate data";
 
 #include <memory>
+#include <cassert>
+#include <cstring>
 
 #include "pack.hpp"
 
