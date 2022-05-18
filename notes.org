@@ -3,6 +3,9 @@
 - [X] 4/27 ImGui integration
 - [X] 4/27 Use config files to configure training
 - [X] 4/27 Read and write config files from ImGui
+- [X] 5/18 Randomize the order of inputs
+- [X] Decay the learning rate with an exponential decay
+
 ** todo
 GUI changes
 - [ ] Run training from ImGui
@@ -11,8 +14,6 @@ GUI changes
 
 Algorithm changes
 - [ ] Be smart about seeding the RNG. You may want to use a different random device
-- [ ] Randomize order of inputs
 - [ ] Split Iris into testing and training data
-- [ ] Decay the learning rate with an exponential decay
 - [ ] Decay the neighborhood distance with an exponential decay
 - [ ] Experiment with Iris dataset (remove part of a cluster, a whole cluster, etc)

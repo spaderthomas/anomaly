@@ -26,6 +26,7 @@ int ini_load_value(void* user, const char* section, const char* name, const char
 	COPY_STRING("som", neighborhood_function);
 	COPY_U32   ("som", count_clusters);
 	COPY_F32   ("som", learning_rate);
+	COPY_F32   ("som", decay_rate);
 	COPY_F32   ("som", error_threshold);
 	COPY_U32   ("som", seed);
 
@@ -47,6 +48,7 @@ void cfg_save(config_t* cfg, const char* path) {
 	fwrite(section_som, strlen(section_som), 1, file);
 	fprintf(file, "neighborhood_function = %s\n", cfg->neighborhood_function);
 	fprintf(file, "learning_rate = %f\n", cfg->learning_rate);
+	fprintf(file, "decay_rate = %f\n", cfg->decay_rate);
 	fprintf(file, "count_clusters = %d\n", cfg->count_clusters);
 	fprintf(file, "error_threshold = %f\n", cfg->error_threshold);
 	fprintf(file, "seed = %d\n", cfg->seed);
@@ -82,12 +84,17 @@ void som_init(som_t* som, float32* input_data, uint32 rows, uint32 cols) {
 	mtx_init(&som->weights, som->config.count_clusters, cols);
 	mtx_init(&som->deltas, som->config.count_clusters, cols);
 	vec_init(&som->winners, rows);
+	arr_init(&som->input_order, rows);
 
-	for (uint32 r = 0; r < som->inputs.rows; r++) {
-		vector_t row = mtx_at(som->inputs, r);
-		uint32 rand_row = rand() % som->inputs.rows;
-		vector_t swap = mtx_at(som->inputs, rand_row);
-		vec_swap(row, swap);
+	for (uint32 i = 0; i < rows; i++) arr_push(&som->input_order, i);
+	for (uint32 i = 0; i < rows; i++) {
+		float32 j = rand() % rows;
+		uint32* vi = som->input_order[i];
+		uint32* vj = som->input_order[j];
+		uint32  vt = *vi;
+
+		*vi = *vj;
+		*vj = vt;
 	}
 
 	mtx_for(som->inputs, input) {
@@ -102,7 +109,27 @@ void som_init(som_t* som, float32* input_data, uint32 rows, uint32 cols) {
 	mtx_for(som->weights, weight) {
 		vec_normalize(weight);
 	}
+}
 
+void som_iterate(som_t* som) {
+	som->iteration++;
+
+	arr_for(som->input_order, i) {
+		vector_t input = mtx_at(som->inputs, *i);
+		uint32 cluster = find_winning_cluster(som, input);
+		calculate_weight_deltas(som, input, cluster);
+		som->winners[*i] = cluster;
+	}
+}
+
+float32 som_error(som_t* som) {
+	float32 error = 0;
+	mtx_for(som->inputs, input) {
+		uint32 cluster = som->winners[mtx_indexof(som->inputs, input)];
+		vector_t weight = mtx_at(som->weights, cluster);
+		error += squared_error(weight, input);
+	}
+	return error;
 }
 
 uint32 find_winning_cluster(som_t* som, vector_t& input) {
@@ -121,12 +148,17 @@ uint32 find_winning_cluster(som_t* som, vector_t& input) {
 	return winning_cluster;
 }
 
+float32 decayed_learning_rate(som_t* som) {
+	float32 decayed = som->config.learning_rate * (1 - som->iteration / som->config.decay_rate);
+	return fmax(decayed, 0);
+}
+
 void calculate_weight_deltas(som_t* som, vector_t& input, uint32 winning_cluster) {
 	mtx_for(som->weights, weight) {
 		uint32 cluster = mtx_indexof(som->weights, weight);
 		float32 strength = ns_linear(winning_cluster, cluster);
 		for (int i = 0; i < input.size; i++) {
-			*mtx_at(som->deltas, cluster, i) += som->config.learning_rate * strength * (input[i] - weight[i]);
+			*mtx_at(som->deltas, cluster, i) += decayed_learning_rate(som) * strength * (input[i] - weight[i]);
 		}
 	}	
 }

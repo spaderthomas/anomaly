@@ -57,11 +57,25 @@ void pack_ctx_float32(ad_pack_context* context, float32 data) {
 	pack_ctx_data(context, &data, sizeof(float32));
 }
 
-void pack_ctx_string(ad_pack_context* context, const char* data, int32 data_size) {
+void pack_ctx_string(ad_pack_context* context, const char* data) {
 	char null_terminator = 0;
+	uint32 data_size = strlen(data);
 	
 	ad_feature feature;
 	feature.type = ad_feature_type::ad_string;
+	feature.size = data_size + 1;
+	pack_ctx_header(context, feature);
+
+	pack_ctx_data(context, data, data_size);
+	pack_ctx_data(context, &null_terminator, sizeof(char));
+}
+
+void pack_ctx_path(ad_pack_context* context, const char* data) {
+	char null_terminator = 0;
+	uint32 data_size = strlen(data);
+
+	ad_feature feature;
+	feature.type = ad_feature_type::ad_path;
 	feature.size = data_size + 1;
 	pack_ctx_header(context, feature);
 

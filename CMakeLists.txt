@@ -36,6 +36,7 @@ target_sources(ad_train PRIVATE
   src/math.cpp
   src/som.cpp
   src/ini.cpp
+  src/utils.cpp
 )
 
 target_include_directories(ad_train PRIVATE
@@ -49,6 +50,7 @@ target_sources(ad_gui PRIVATE
   src/gui/ogl.cpp
   src/som.cpp
   src/math.cpp
+  src/utils.cpp
   src/ini.cpp
   src/gui/glad.c
   src/gui/imgui.cpp

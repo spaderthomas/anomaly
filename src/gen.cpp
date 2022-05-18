@@ -121,6 +121,34 @@ void load_iris(char* buffer, uint32 buffer_size) {
 	pack_ctx_write(&context, output_path);
 }
 
+void load_paths(char* buffer, uint32 buffer_size) {
+	printf("generating data using load_path\n");
+	
+	// Simple 2D points that should map to two linearly separable clusters
+	const char* data_set [] = {
+        "/usr/bin/ssh",
+        "/usr/bin/grep",
+        "/bin/mv",
+        "/bin/zsh",
+
+        "/Users/tspader/source/anomaly/build/ad_gen",
+        "/Users/tspader/source/anomaly/build/ad_featurize",
+        "/Users/tspader/source/anomaly/build/ad_train",
+        "/Users/tspader/source/anomaly/build/ad_gui",
+	};
+	
+	ad_pack_context context;
+	pack_ctx_init(&context, buffer, buffer_size);
+
+	for (int i = 0; i < 8; i++) {
+		pack_ctx_row(&context);
+		pack_ctx_path(&context, data_set[i]);
+	}
+	pack_ctx_end(&context);
+
+	pack_ctx_write(&context, output_path);
+}
+
 int main(int arg_count, char** args) {
 	load = &load_test;
 	for (int32 i = 1; i < arg_count; i++) {
@@ -133,6 +161,7 @@ int main(int arg_count, char** args) {
 			char* arg = args[++i];
 			if (!strcmp(arg, "test")) load = &load_test;
 			if (!strcmp(arg, "iris")) load = &load_iris;
+			if (!strcmp(arg, "path")) load = &load_paths;
 		}
 		else if (!strcmp(flag, AD_FLAG_HELP)) {
 			printf("%s\n", help);

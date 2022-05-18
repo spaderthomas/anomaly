@@ -37,7 +37,32 @@ uint32 ad_featurize_float(std::vector<float32>* buffer, float32* feature) {
 	buffer->push_back(*feature);
 	return 1;
 }
-	
+
+bool is_path_prefix(const char* path, const char* start) {
+	int32 ls = strlen(start);
+	int32 lp = strlen(path);
+	if (ls > lp) return false;
+
+	return !strncmp(start, path, ls - 1);
+}
+
+uint32 ad_featurize_path(std::vector<float32>* buffer, char* path) {
+	uint32 features = 0;
+
+	float32 is_system_binary = 0;
+	if (is_path_prefix(path, "/bin"))     is_system_binary = 1;
+	if (is_path_prefix(path, "/usr/bin")) is_system_binary = 1;
+	buffer->push_back(is_system_binary);
+	features++;
+
+	float32 is_user_dir = 0;
+	if (is_path_prefix(path, "/Users")) is_user_dir = 1;
+	buffer->push_back(is_user_dir);
+	features++;
+
+	return features;
+}
+
 int main(int arg_count, char** args) {
 	std::vector<float32> featurized;
 	char input_path  [AD_PATH_SIZE] = { 0 };
@@ -100,6 +125,11 @@ int main(int arg_count, char** args) {
 			if (do_log) printf("float: %f\n", *(float*)data);
 
 			uint32 count = ad_featurize_float(&featurized, (float*)data);
+			features_written_row += count;
+		}
+		else if (header->type == ad_feature_type::ad_path) {
+			if (do_log) printf("path: %s\n", (char*)data);
+			uint32 count = ad_featurize_path(&featurized, (char*)data);
 			features_written_row += count;
 		}
 	}
