@@ -58,7 +58,6 @@ void cfg_load(config_t* config, const char* path) {
         printf("Can't load 'test.ini'\n");
         return;
     }
-
 }
 
 float32 ns_linear(uint32 winning_cluster, uint32 neighbor_cluster) {
@@ -77,10 +76,19 @@ float32 ns_none(uint32 winning_cluster, uint32 neighbor_cluster) {
 }
 
 void som_init(som_t* som, float32* input_data, uint32 rows, uint32 cols) {
+	if (som->config.seed) srand(som->config.seed);
+
 	mtx_init(&som->inputs, input_data, rows, cols);
 	mtx_init(&som->weights, som->config.count_clusters, cols);
 	mtx_init(&som->deltas, som->config.count_clusters, cols);
 	vec_init(&som->winners, rows);
+
+	for (uint32 r = 0; r < som->inputs.rows; r++) {
+		vector_t row = mtx_at(som->inputs, r);
+		uint32 rand_row = rand() % som->inputs.rows;
+		vector_t swap = mtx_at(som->inputs, rand_row);
+		vec_swap(row, swap);
+	}
 
 	mtx_for(som->inputs, input) {
 		vec_normalize(input);
@@ -95,7 +103,6 @@ void som_init(som_t* som, float32* input_data, uint32 rows, uint32 cols) {
 		vec_normalize(weight);
 	}
 
-	if (som->config.seed) srand(som->config.seed);
 }
 
 uint32 find_winning_cluster(som_t* som, vector_t& input) {

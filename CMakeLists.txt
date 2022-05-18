@@ -62,12 +62,14 @@ target_sources(ad_gui PRIVATE
 
 target_include_directories(ad_gui PRIVATE
   "${CMAKE_CURRENT_LIST_DIR}/include"
-    "${CMAKE_CURRENT_LIST_DIR}/include/imgui"
+  "${CMAKE_CURRENT_LIST_DIR}/include/imgui"
   "/usr/local/include"
+  "/opt/homebrew/include"
 )
 
 target_link_directories(ad_gui PRIVATE
   "/usr/local/lib"
+  "/opt/homebrew/lib"
 )
 
 find_library(OGL OpenGL)

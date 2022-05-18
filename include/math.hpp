@@ -18,6 +18,9 @@ float32 vec_length(vector_t& vec);
 void vec_normalize(vector_t& vec);
 float32 vec_distance(vector_t& va, vector_t& vb);
 void vec_subtract(vector_t& va, vector_t& vb, vector_t& vout);
+vector_t vec_copy(vector_t& v);
+void vec_free(vector_t& v);
+void vec_swap(vector_t& a, vector_t& b);
 #define vec_for(v, e) for (auto e = v.data; e < v.data + v.size; e++)
 
 

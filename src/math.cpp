@@ -46,7 +46,27 @@ void vec_subtract(vector_t& va, vector_t& vb, vector_t& vout) {
 	for (int i = 0; i < va.size; i++) {
 		vout[i] = va[i] - vb[i];
 	}
-	
+}
+
+vector_t vec_copy(vector_t& v) {
+	vector_t copy;
+	vec_init(&copy, v.size);
+	memcpy(copy.data, v.data, v.size * sizeof(float32));
+	return copy;
+}
+
+void vec_swap(vector_t& a, vector_t& b) {
+	assert(a.size == b.size);
+	vector_t copy = vec_copy(a);
+	memcpy(a.data, b.data, a.size * sizeof(float32));
+	memcpy(b.data, copy.data, b.size * sizeof(float32));
+	vec_free(copy);
+}
+
+void vec_free(vector_t& v) {
+	free(v.data);
+	v.data = nullptr;
+	v.size = 0;
 }
 
 void mtx_init(matrix_t* mtx, uint32 rows, uint32 cols) {

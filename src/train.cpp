@@ -37,9 +37,6 @@ const char* help =
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
 
-
-
-// Algorithm parameters
 int main(int arg_count, char** args) {
 	char input_path [AD_PATH_SIZE] = { 0 };
 
