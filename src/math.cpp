@@ -7,6 +7,10 @@
 #include <vector>
 #include <float.h>
 #include <memory>
+#ifdef _WIN32
+#include <assert.h>
+#endif
+
 #include "math.hpp"
 
 void vec_init(vector_t* vector, float32* data, uint32 size) {
@@ -35,6 +39,7 @@ float32 vec_distance(vector_t& va, vector_t& vb) {
 	assert(va.size == vb.size);
 
 	float32 sum = 0;
+
 	for (int i = 0; i < va.size; i++) {
 		sum = sum + pow(va[i] - vb[i], 2);
 	}

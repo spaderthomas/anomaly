@@ -97,7 +97,7 @@ int main(int arg_count, char** args) {
 		}
 	}
 
-	write_clusters(&som.winners, &som.config);
+	write_results(&som.winners, som.config.results_file);
 
 	for (uint32 i = 0; i < som.winners.size; i++) {
 		printf("input %d: %d\n", i, (uint32)som.winners[i]);

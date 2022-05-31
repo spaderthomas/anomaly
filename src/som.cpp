@@ -3,6 +3,9 @@
 #include <cstdlib>
 #include <cmath>
 #include <float.h>
+#ifdef _WIN32
+#include <assert.h>
+#endif
 
 #include "ini.hpp"
 

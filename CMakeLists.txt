@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.13)
 set(CMAKE_CXX_STANDARD 20)
 project(anomaly)
 
+if(MSVC)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+endif()
 
 # Raw data generator
 add_executable(ad_gen)
@@ -72,13 +75,21 @@ target_include_directories(ad_gui PRIVATE
 target_link_directories(ad_gui PRIVATE
   "/usr/local/lib"
   "/opt/homebrew/lib"
+  "${CMAKE_CURRENT_LIST_DIR}/lib"
 )
 
-find_library(OGL OpenGL)
-if (NOT OGL)
-    message(FATAL_ERROR "OpenGL not found")
+find_package(OpenGL REQUIRED)
+
+if (MSVC)
+   add_library(glfw SHARED IMPORTED)
+   set_property(TARGET glfw PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_LIST_DIR}/lib/glfw3.dll)
+   set_property(TARGET glfw PROPERTY IMPORTED_IMPLIB ${CMAKE_CURRENT_LIST_DIR}/lib/glfw3dll.lib)
+   add_custom_command(TARGET ad_gui
+      POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_LIST_DIR}/lib/glfw3.dll ${CMAKE_CURRENT_LIST_DIR}/build/Debug
+   )
 endif()
 
 target_link_libraries(ad_gui PRIVATE
   glfw
-  ${OGL})
+  OpenGL::GL)

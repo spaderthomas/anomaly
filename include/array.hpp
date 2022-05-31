@@ -1,8 +1,12 @@
 #ifndef AD_ARR_H
 #define AD_ARR_H
 
-#include "types.hpp"
 #include <memory>
+#ifdef _WIN32
+#include <assert.h>
+#endif
+
+#include "types.hpp"
 
 void memfill(void* dst, int32 size, void* pattern, int32 pattern_size);
 
