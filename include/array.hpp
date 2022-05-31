@@ -2,7 +2,7 @@
 #define AD_ARR_H
 
 #include <memory>
-#ifdef _WIN32
+#if defined(_WIN32) or defined(__linux)
 #include <assert.h>
 #endif
 
