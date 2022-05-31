@@ -20,6 +20,7 @@ int ini_load_value(void* user, const char* section, const char* name, const char
 	#define COPY_STRING(s, n) if (MATCH(s, #n)) strncpy(config->n, value, strlen(value))
 	#define COPY_U32(s, n) if (MATCH(s, #n)) config->n = atoi(value);
 	#define COPY_F32(s, n) if (MATCH(s, #n)) config->n = atof(value);
+#define COPY_BOOL(s, n) if (MATCH(s, #n)) config->n = (s[0] == 't' ? true : false);
 
 	COPY_STRING("generator", name);
 	COPY_STRING("generator", generator_function);
@@ -34,6 +35,8 @@ int ini_load_value(void* user, const char* section, const char* name, const char
 	COPY_F32   ("som", error_threshold);
 	COPY_U32   ("som", seed);
 
+	COPY_BOOL  ("som", quiet);
+	COPY_BOOL  ("som", write_output);
     return 1;
 }
 

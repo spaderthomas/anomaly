@@ -123,6 +123,22 @@ ad_return_t unpack_ctx_init(ad_unpack_context* context, const char* filepath) {
 	return AD_RETURN_SUCCESS;
 };
 
+ad_return_t unpack_ctx_init(ad_unpack_context* context, char* buffer, uint32 buffer_size) {
+	context->buffer_size = buffer_size;
+	context->buffer = buffer;
+	context->bytes_read = 0;
+
+	uint32* magic = (uint32*)context->buffer;
+	if (*magic != ad_feature::dataset_magic) {
+		fprintf(stderr, "mismatch between dataset header and expected header, actual = %d, expected = %d\n",
+				*magic, ad_feature::dataset_magic);
+		return AD_RETURN_BAD_HEADER;
+	}
+	context->bytes_read += sizeof(int32);
+	
+	return AD_RETURN_SUCCESS;
+};
+
 ad_return_t unpack_ctx_done(ad_unpack_context* context) {
 	if (context->bytes_read >= context->buffer_size) return AD_RETURN_NOT_DONE;
 

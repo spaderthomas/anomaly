@@ -50,6 +50,7 @@ struct ad_unpack_context {
 	char* last_feature;	// For debugging
 };
 
+ad_return_t unpack_ctx_init(ad_unpack_context* context, char* buffer, uint32 buffer_size);
 ad_return_t unpack_ctx_init(ad_unpack_context* context, const char* filepath);
 ad_return_t unpack_ctx_next(ad_unpack_context* context, ad_feature** header, void** data);
 ad_return_t unpack_ctx_done(ad_unpack_context* context);

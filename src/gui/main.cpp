@@ -10,11 +10,13 @@
 #include "gui/ogl.hpp"
 #include "types.hpp"
 #include "som.hpp"
-
+#include "platform.hpp"
+#include "pipeline.hpp"
 
 namespace global {
 	::ImGui::FileBrowser file_browser;
 	bool show_imgui_demo = false;
+	char install_dir [256] = {0};
 };
 
 int main (int argc, char** argv) {
@@ -23,6 +25,7 @@ int main (int argc, char** argv) {
 	};
 	bool is_loading_config = false;
 
+	init_paths();
   	init_glfw();
   	init_gl();
   	init_imgui();
@@ -102,6 +105,7 @@ int main (int argc, char** argv) {
 			ImGui::EndPopup();
 		}
 
+		// If we asked to load a config, check if we selected a file and if so load it
 		if (is_loading_config) {
 			if (global::file_browser.HasSelected()) {
 				auto path = global::file_browser.GetSelected().string();
@@ -112,6 +116,7 @@ int main (int argc, char** argv) {
 
 		}
 
+		// Display the config fields for the generation and featurization
 		ImGui::Text("ad_gen config");
 
 		int input_size = 200;
@@ -130,6 +135,7 @@ int main (int argc, char** argv) {
 		ImGui::SameLine(ImGui::GetWindowWidth() - input_size);
 		ImGui::InputText("##ad_gen:featurized_data_file", config.featurized_data_file, 256);
 
+		// Display the config fields for SOM itself
 		ImGui::Separator();
 		ImGui::Text("som config");
 
@@ -156,11 +162,24 @@ int main (int argc, char** argv) {
 		ImGui::InputScalar("##som:seed", ImGuiDataType_U32, &config.seed);
 
 		if (ImGui::Button("Train")) {
-			ImGui::OpenPopup("Unimplemented");
-		}
-		if (ImGui::BeginPopup("Unimplemented")) {
-			ImGui::Text("i have not implemented this yet");
-			ImGui::EndPopup();
+			// Generate
+			uint32 buffer_size = 1024 * 1024;
+			char* buffer = (char*)calloc(sizeof(char), buffer_size);
+			ad_generate(&config, buffer, buffer_size);
+
+			// Featurize
+			ad_unpack_context unpack;
+			unpack_ctx_init(&unpack, buffer, buffer_size);
+			
+			ad_featurized_header header;
+			std::vector<float32> featurized;
+			
+			ad_featurize(&unpack, &featurized, &header);
+
+			// Train
+			som_t som;
+			som.config = config;
+			ad_train(som, &header, featurized.data());
 		}
 		ImGui::End();
 

@@ -17,6 +17,10 @@ struct config_t {
 	uint32 count_clusters            =  0;
 	float32 error_threshold          =  0;
 	uint32 seed                      =  0;
+
+	bool quiet        = false;
+	bool write_output = false;
+
 };
 void cfg_save(config_t* cfg, const char* path);
 void cfg_load(config_t* config, const char* path);
@@ -44,6 +48,5 @@ uint32 find_winning_cluster(som_t* som, vector_t& input);
 void calculate_weight_deltas(som_t* som, vector_t& input, uint32 winning_cluster);
 float32 squared_error(vector_t& weight, vector_t& input);
 void apply_deltas(som_t* som);
-
 
 #endif
