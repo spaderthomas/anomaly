@@ -21,6 +21,16 @@ const char* help =
 #define AD_FLAG_INPUT "-i"
 #define AD_FLAG_HELP "-h"
 
+ad_return_t write_results(vector_t* clusters, const char* path) {
+	FILE* file = fopen(path, "w+");
+	if (!file) return AD_RETURN_BAD_FILE;
+
+	fwrite(clusters->data, clusters->size * sizeof(float32), 1, file);
+	fclose(file);
+
+	return AD_RETURN_SUCCESS;
+}
+
 int main(int arg_count, char** args) {
 	char input_path [AD_PATH_SIZE] = { 0 };
 
@@ -86,6 +96,8 @@ int main(int arg_count, char** args) {
 			break;
 		}
 	}
+
+	write_clusters(&som.winners, &som.config);
 
 	for (uint32 i = 0; i < som.winners.size; i++) {
 		printf("input %d: %d\n", i, (uint32)som.winners[i]);

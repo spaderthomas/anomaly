@@ -5,10 +5,11 @@
 #include "array.hpp"
 
 struct config_t {
-	char name                  [64]  = {0};
-	char generator_function    [64]  = {0};
-	char raw_data_file        [256]  = {0};
-	char featurized_data_file [256]  = {0};
+	char name                  [64] = {0};
+	char generator_function    [64] = {0};
+	char raw_data_file        [256] = {0};
+	char featurized_data_file [256] = {0};
+	char results_file         [256] = {0};
 
 	char neighborhood_function [256] = {0};
 	float32 learning_rate            =  0;

@@ -14,6 +14,7 @@
 
 namespace global {
 	::ImGui::FileBrowser file_browser;
+	bool show_imgui_demo = false;
 };
 
 int main (int argc, char** argv) {
@@ -21,7 +22,6 @@ int main (int argc, char** argv) {
 		bool save_config = false;
 	};
 	bool is_loading_config = false;
-	bool show_demo_window = true;
 
   	init_glfw();
   	init_gl();
@@ -36,7 +36,7 @@ int main (int argc, char** argv) {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-		//ImGui::ShowDemoWindow(&show_demo_window);
+		if (global::show_imgui_demo) ImGui::ShowDemoWindow(&global::show_imgui_demo);
 
 		ImGui::SetNextWindowSize({400, 0});
 		ImGui::Begin("anomaly");
@@ -55,6 +55,11 @@ int main (int argc, char** argv) {
 
 					ImGui::EndMenu();
 				}
+				ImGui::EndMenu();
+			}
+
+			if (ImGui::BeginMenu("Window")) {
+				ImGui::MenuItem("Show ImGui Demo", "", &global::show_imgui_demo);
 				ImGui::EndMenu();
 			}
 

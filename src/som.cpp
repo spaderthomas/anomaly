@@ -22,6 +22,7 @@ int ini_load_value(void* user, const char* section, const char* name, const char
 	COPY_STRING("generator", generator_function);
 	COPY_STRING("generator", raw_data_file);
 	COPY_STRING("generator", featurized_data_file);
+	COPY_STRING("generator", results_file);
 
 	COPY_STRING("som", neighborhood_function);
 	COPY_U32   ("som", count_clusters);
@@ -57,7 +58,7 @@ void cfg_save(config_t* cfg, const char* path) {
 
 void cfg_load(config_t* config, const char* path) {
     if (ini_parse(path, ini_load_value, config) < 0) {
-        printf("Can't load 'test.ini'\n");
+        printf("cannot load config file, path = %s\n", path);
         return;
     }
 }
