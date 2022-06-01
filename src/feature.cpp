@@ -31,7 +31,7 @@ ad_return_t write_featurized_data(ad_featurized_header* header, std::vector<floa
 // floating point numbers
 uint32 ad_featurize_float(std::vector<float32>* buffer, float32* feature) {
 	buffer->push_back(*feature);
-	return 1;
+		return 1;
 }
 
 bool is_path_prefix(const char* path, const char* start) {

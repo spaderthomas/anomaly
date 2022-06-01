@@ -156,6 +156,7 @@ gen_fn get_generator(const char* generator_name) {
 
 void ad_generate(config_t* config, char* buffer, uint32 buffer_size) {
 	gen_fn generate = get_generator(config->generator_function);
+	if (!generate) { printf("could not find generator, name = %s\n", config->generator_function); return; }
 	generate(config, buffer, buffer_size);
 }
 
